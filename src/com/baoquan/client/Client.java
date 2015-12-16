@@ -11,6 +11,7 @@ import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -89,7 +90,7 @@ public class Client {
 		// 生成请求数据的json
 		String payloadJson = JSON.toJSONString(payload);
 		// 访问时间
-		long tonce = getServerTime();
+		long tonce = getLocalTime();
 		Map<String, String> paras = new HashMap<String, String>();
 		paras.put("access_key", getAccessKey());
 		paras.put("tonce", tonce + "");
@@ -177,6 +178,10 @@ public class Client {
 		QueryResult qrs = JSON.parseObject(result, QueryResult.class);
 		return qrs.getTimestamp();
 	}
+	
+	private Long getLocalTime(){
+		return new Date().getTime()/1000;
+	}
 
 	private String post(Payload payload, String apiPath) throws ApiExcption {
 		return post(payload, apiPath, null);
@@ -198,7 +203,7 @@ public class Client {
 		payloadJson = payloadJson.replaceAll("\"iD\"", "\"ID\"").replaceAll("\"mO\"", "\"MO\"");
 		System.out.println(payloadJson);
 		// 访问时间
-		long tonce = getServerTime();
+		long tonce = getLocalTime();
 		// 生成签名
 		String signature = signature(method, apiPath, payloadJson, tonce);
 		try {
@@ -441,10 +446,10 @@ public class Client {
 				if ((statusCode + "").startsWith("2")&& statusCode < 300) {
 					HttpEntity resEntity = response.getEntity();
 					// httpclient自带的工具类读取返回数据
-					sbuf.append(EntityUtils.toString(resEntity));
+					sbuf.append(EntityUtils.toString(resEntity,"UTF-8"));
 					EntityUtils.consume(resEntity);
 				} else {
-					String content = EntityUtils.toString(response.getEntity());
+					String content = EntityUtils.toString(response.getEntity(),"UTF-8");
 					throw new ApiExcption(statusCode, response.getStatusLine().getReasonPhrase() + content);
 				}
 			} catch (ParseException | IOException e) {
@@ -484,10 +489,10 @@ public class Client {
 				if ((statusCode + "").startsWith("2") && statusCode < 300) {
 					HttpEntity resEntity = response.getEntity();
 					// httpclient自带的工具类读取返回数据
-					sbuf.append(EntityUtils.toString(resEntity));
+					sbuf.append(EntityUtils.toString(resEntity,"UTF-8"));
 					EntityUtils.consume(resEntity);
 				} else {
-					String content = EntityUtils.toString(response.getEntity());
+					String content = EntityUtils.toString(response.getEntity(),"UTF-8");
 					throw new ApiExcption(statusCode, response.getStatusLine().getReasonPhrase() + content);
 				}
 			} catch (ParseException | IOException e) {
