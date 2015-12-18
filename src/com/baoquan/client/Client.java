@@ -56,7 +56,7 @@ public class Client {
 	 * @throws ApiExcption
 	 */
 	@Testable
-	public Attestation createAttestation(String template_id, Identities identities, List<Factoid> factoids) throws ApiExcption {
+	public Attestation createAttestation(String template_id, Identities identities, List<Factoid> factoids, Map<String, List<File>> fileListMap) throws ApiExcption {
 		Utils.checkString(template_id, "template_id 不能为空 ！");
 		if (factoids != null && factoids.size() > 0) {
 			checkFactoids(factoids);
@@ -67,7 +67,7 @@ public class Client {
 		payload.setTemplate_id(template_id);
 		payload.setIdentities(identities);
 		payload.setFactoids(factoids);
-		String result = post(payload, "/api/v1/attestations");
+		String result = post(payload, "/api/v1/attestations",fileListMap);
 		return JSON.parseObject(result, Attestation.class);
 	}
 
@@ -86,7 +86,6 @@ public class Client {
 		String method = "GET";
 		Payload payload = new Payload();
 		payload.setNo(no);
-
 		// 生成请求数据的json
 		String payloadJson = JSON.toJSONString(payload);
 		// 访问时间
@@ -140,14 +139,14 @@ public class Client {
 	 * @throws ApiExcption
 	 */
 	@Testable
-	public List<FactoidInfo> createFactoids(String ano, List<Factoid> factoids) throws ApiExcption {
+	public List<FactoidInfo> createFactoids(String ano, List<Factoid> factoids, Map<String, List<File>> fileListMap) throws ApiExcption {
 		Utils.checkString(ano, "ano 不能为空 ！");
 		Utils.checkList(factoids, "factoids 不能为空 ！");
 		checkFactoids(factoids);
 		Payload payload = new Payload();
 		payload.setAno(ano);
 		payload.setFactoids(factoids);
-		String result = post(payload, "/api/v1/factoids/multi");
+		String result = post(payload, "/api/v1/factoids/multi",fileListMap);
 		List<FactoidInfo> list = JSON.parseArray(result, FactoidInfo.class);
 		List<String> successIds = new ArrayList<String>();
 		List<String> failedIds = new ArrayList<String>();
@@ -183,25 +182,23 @@ public class Client {
 		return new Date().getTime()/1000;
 	}
 
-	private String post(Payload payload, String apiPath) throws ApiExcption {
-		return post(payload, apiPath, null);
-	}
-
-	private String post(Payload payload, String apiPath, List<File> attachments) throws ApiExcption {
+	@SuppressWarnings("unchecked")
+	private String post(Payload payload, String apiPath, Object attachments) throws ApiExcption {
 		String method = "POST";
 		// 生成文件摘要并创建上传entity
 		MultipartEntity reqEntity = new MultipartEntity();
 		// 保存单个陈述的时候
-		if (attachments != null && attachments.size() > 0) {
-			parseAttachments(payload, reqEntity, attachments);
-		} else if (payload.getFactoids() != null && payload.getFactoids().size() > 0) {
-			parseAttachments(payload, reqEntity);
+		if (attachments instanceof List) {
+			List<File> files = (List<File>) attachments;
+			parseAttachments(payload, reqEntity, files);
+		} else if (attachments instanceof Map  ) {
+			Map<String, List<File>> listFileMap = (Map<String, List<File>>)attachments;
+			parseAttachments(payload, reqEntity,listFileMap);
 		}
 		// 生成请求数据的json
 		String payloadJson = JSON.toJSONString(payload);
 		// 大小写问题(java默认首字母小写)
 		payloadJson = payloadJson.replaceAll("\"iD\"", "\"ID\"").replaceAll("\"mO\"", "\"MO\"");
-		System.out.println(payloadJson);
 		// 访问时间
 		long tonce = getLocalTime();
 		// 生成签名
@@ -212,9 +209,9 @@ public class Client {
 			reqEntity.addPart("signature", new StringBody(signature, Charset.forName(CHARSET_NAME)));
 			reqEntity.addPart("tonce", new StringBody(tonce + "", Charset.forName(CHARSET_NAME)));
 		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			// e.printStackTrace();
+
 		}
+
 		return innerHttpClient.post(apiPath, reqEntity);
 	}
 
@@ -234,38 +231,38 @@ public class Client {
 		}
 	}
 
+	
 	/**
 	 * 解析附件(应用于多个陈述)
 	 * 
 	 * @param payload
 	 * @param reqEntity
 	 */
-	private void parseAttachments(Payload payload, MultipartEntity reqEntity) {
-		List<Factoid> list = payload.getFactoids();
-		if (list == null || list.size() == 0) {
-			return;
+	private void parseAttachments(Payload payload, MultipartEntity reqEntity,Map<String, List<File>> listfilesMap) {
+		if(listfilesMap == null || listfilesMap.keySet().size() == 0 ){
+			return ;
 		}
 		Map<String, List<String>> payloadAttachmentsMap = new HashMap<String, List<String>>();
-		for (int i = 0; i < list.size(); i++) {
-			Factoid factoid = list.get(i);
-			List<File> attachments = factoid.getFiles();
-			List<String> filesums = new ArrayList<String>();
-			for (int j = 0; j < attachments.size(); j++) {
-				File f = attachments.get(j);
-				// 文件摘要
-				String filesum = checksums(f);
-				filesums.add(filesum);
-				// 文件上传的名称
-				String uploadKey = String.format("attachments[%d][]", i);
-				reqEntity.addPart(uploadKey, getFileBody(f));
-			}
-
-			if (filesums.size() > 0) {
-				payloadAttachmentsMap.put(i + "", filesums);
-			}
-			// 清理附件列表（避免不必要的json转换）
-			factoid.clearFiles();
-
+		Iterator<String> it = listfilesMap.keySet().iterator();
+		while(it.hasNext()){
+			String key = it.next() ;
+			List<File> files = listfilesMap.get(key);
+			if(files.size() > 0 ){
+				List<String> filesums = new ArrayList<String>();
+				for (int j = 0; j < files.size(); j++) {
+					File f = files.get(j);
+					// 文件摘要
+					String filesum = checksums(f);
+					filesums.add(filesum);
+					// 文件上传的名称
+					String uploadKey = String.format("attachments[%s][]",key);
+					reqEntity.addPart(uploadKey, getFileBody(f));
+				}
+				if (filesums.size() > 0) {
+					payloadAttachmentsMap.put(key + "", filesums);
+				}
+			}	
+			
 		}
 		// 设置payload的 Attachments
 		if (payloadAttachmentsMap.keySet().size() > 0) {
@@ -273,6 +270,7 @@ public class Client {
 		}
 
 	}
+	
 
 	/**
 	 * 解析附件(应用于单个陈述)

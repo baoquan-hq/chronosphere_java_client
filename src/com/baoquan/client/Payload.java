@@ -5,7 +5,7 @@ import java.util.Map;
 
 public class Payload {
 	//保全相关信息 
-	private String no ;//
+	private String no ;
 	private String template_id;
 	private Identities identities;
 	private List<Factoid>  factoids;
