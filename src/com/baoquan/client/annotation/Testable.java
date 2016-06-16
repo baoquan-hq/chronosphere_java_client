@@ -1,4 +1,4 @@
-package com.baoquan.client;
+package com.baoquan.client.annotation;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -13,4 +13,5 @@ import java.lang.annotation.Target;
  *
  */
 public @interface Testable {
+
 }

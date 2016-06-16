@@ -1,4 +1,4 @@
-package com.baoquan.client;
+package com.baoquan.client.attestation.model;
 
 import java.util.List;
 import java.util.Map;
@@ -14,6 +14,7 @@ public class Payload {
 	private Map<String, Object> data ;
 	private Factoid factoid;
 	private Object attachments;
+	private Boolean completed = false ;
 	public Payload() { 
 	}
 	public String getNo() {
@@ -73,4 +74,11 @@ public class Payload {
 	public void setData(Map<String, Object> data) {
 		this.data = data;
 	}
+	public Boolean getCompleted() {
+		return completed;
+	}
+	public void setCompleted(Boolean completed) {
+		this.completed = completed;
+	}
+
 }

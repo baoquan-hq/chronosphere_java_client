@@ -1,4 +1,4 @@
-package com.baoquan.client;
+package com.baoquan.client.attestation.model;
 
 import java.util.List;
 import java.util.Map;

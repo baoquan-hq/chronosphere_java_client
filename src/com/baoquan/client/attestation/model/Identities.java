@@ -1,4 +1,4 @@
-package com.baoquan.client;
+package com.baoquan.client.attestation.model;
 
 public class Identities {
 
